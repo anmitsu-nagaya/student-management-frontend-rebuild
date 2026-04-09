@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="raisetech.student.management.repository.StudentRepository">
+  <!-- 受講生の全件検索 -->
+  <select id="searchStudentList" resultType="raisetech.student.management.data.Student">
+    SELECT *
+    FROM StudentManagement.students
+  </select>
+
+  <!-- 受講生の単一検索 -->
+  <select id="searchStudent" parameterType="String"
+    resultType="raisetech.student.management.data.Student">
+    SELECT *
+    FROM StudentManagement.students
+    WHERE student_id = #{studentId}
+  </select>
+
+  <!-- 受講生のコース情報の全件検索 -->
+  <select id="searchStudentCourseList" resultType="raisetech.student.management.data.StudentCourse">
+    SELECT * FROM StudentManagement.students_courses
+  </select>
+
+  <!-- 受講生IDに紐づく受講生コース情報を検索 -->
+  <select id="searchStudentCourse" parameterType="String"
+    resultType="raisetech.student.management.data.StudentCourse">
+    SELECT * FROM StudentManagement.students_courses WHERE student_id = #{studentId}
+  </select>
+
+  <!-- 受講生のコース申し込み状況の全件検索 -->
+  <select id="searchStudentCourseStatusList"
+    resultType="raisetech.student.management.data.StudentCourseStatus">
+    SELECT * FROM StudentManagement.students_courses_status
+  </select>
+
+  <!-- コースIDに紐づくコース申し込み状況を検索 -->
+  <select id="searchStudentCourseStatus" parameterType="Integer"
+    resultType="raisetech.student.management.data.StudentCourseStatus">
+    SELECT * FROM StudentManagement.students_courses_status WHERE course_id = #{courseId}
+  </select>
+
+  <!-- 条件検索結果を明示的にマッピングする定義 -->
+  <resultMap id="studentDetailMap" type="raisetech.student.management.domain.StudentDetail">
+    <!-- Student -->
+    <association property="student" javaType="raisetech.student.management.data.Student">
+      <id property="studentId" column="student_id"/>
+      <result property="studentFullName" column="student_full_name"/>
+      <result property="studentFurigana" column="student_furigana"/>
+      <result property="studentNickname" column="student_nickname"/>
+      <result property="email" column="email"/>
+      <result property="prefecture" column="prefecture"/>
+      <result property="city" column="city"/>
+      <result property="age" column="age"/>
+      <result property="gender" column="gender"/>
+      <result property="studentRemark" column="student_remark"/>
+      <result property="studentIsDeleted" column="student_is_deleted"/>
+    </association>
+
+    <!-- courseList -->
+    <collection property="courseList" ofType="raisetech.student.management.domain.CourseDetail">
+      <association property="course" javaType="raisetech.student.management.data.StudentCourse">
+        <id property="courseId" column="course_id"/>
+        <result property="studentId" column="student_id"/>
+        <result property="courseName" column="course_name"/>
+      </association>
+      <association property="status"
+        javaType="raisetech.student.management.data.StudentCourseStatus">
+        <result property="statusId" column="status_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="status" column="status"/>
+        <result property="temporaryAppliedAt" column="temporary_applied_at"/>
+        <result property="officialAppliedAt" column="official_applied_at"/>
+        <result property="courseStartedAt" column="course_started_at"/>
+        <result property="courseCompletedAt" column="course_completed_at"/>
+      </association>
+    </collection>
+
+  </resultMap>
+
+  <!-- 受講生詳細の条件検索 -->
+  <select id="searchFilterStudentList" resultMap="studentDetailMap">
+    SELECT
+    *
+    FROM StudentManagement.students stu
+    JOIN StudentManagement.students_courses c
+    ON stu.student_id = c.student_id
+    JOIN StudentManagement.students_courses_status sta
+    ON c.course_id = sta.course_id
+    WHERE 1=1
+    <if test="studentId != null">AND stu.student_id = #{studentId}</if>
+    <if test="studentFullName != null and studentFullName != ''">
+      AND stu.student_full_name LIKE CONCAT('%', #{studentFullName}, '%')
+    </if>
+    <if test="studentFurigana != null and studentFurigana != ''">
+      AND stu.student_furigana LIKE CONCAT('%', #{studentFurigana}, '%')
+    </if>
+    <if test="studentNickname != null and studentNickname != ''">
+      AND stu.student_nickname LIKE CONCAT('%', #{studentNickname}, '%')
+    </if>
+    <if test="email != null and email != ''">
+      AND stu.email LIKE CONCAT('%', #{email}, '%')
+    </if>
+    <if test="prefecture != null and prefecture != ''">
+      AND stu.prefecture LIKE CONCAT('%', #{prefecture}, '%')
+    </if>
+    <if test="city != null and city != ''">
+      AND stu.city LIKE CONCAT('%', #{city}, '%')
+    </if>
+    <if test="ageFrom != null">
+      AND stu.age &gt;= #{ageFrom}
+    </if>
+    <if test="ageTo != null">
+      AND stu.age &lt;= #{ageTo}
+    </if>
+    <if test="gender != null and gender != ''">
+      AND stu.gender LIKE CONCAT('%', #{gender}, '%')
+    </if>
+    <if test="studentIsDeleted != null">
+      AND stu.student_is_deleted = #{studentIsDeleted}
+    </if>
+    <if test="courseName != null and courseName != ''">
+      AND c.course_name LIKE CONCAT('%', #{courseName}, '%')
+    </if>
+    <if test="status != null">
+      AND sta.status = #{status}
+    </if>
+  </select>
+
+  <!-- 受講生を新規登録 -->
+  <insert id="registerStudent" parameterType="raisetech.student.management.data.Student">
+    INSERT INTO
+    StudentManagement.students(student_id,student_full_name,student_furigana,student_nickname,email,prefecture,
+    city,age,gender,student_remark,student_is_deleted) VALUES(#{studentId}, #{studentFullName},
+    #{studentFurigana}, #{studentNickname}, #{email}, #{prefecture}, #{city}, #{age}, #{gender},
+    #{studentRemark}, false)
+  </insert>
+
+  <!-- 受講生コース情報を新規登録 -->
+  <insert id="registerStudentCourse"
+    parameterType="raisetech.student.management.data.StudentCourse"
+    useGeneratedKeys="true"
+    keyProperty="courseId"
+    keyColumn="course_id">
+    INSERT INTO StudentManagement.students_courses(course_id,student_id,course_name)
+    VALUES (#{courseId}, #{studentId}, #{courseName})
+  </insert>
+
+  <!-- コース申し込み状況を新規登録 -->
+  <insert id="registerStudentCourseStatus"
+    parameterType="raisetech.student.management.data.StudentCourseStatus"
+    useGeneratedKeys="true"
+    keyProperty="statusId"
+    keyColumn="status_id">
+    INSERT INTO StudentManagement.students_courses_status (status_id, course_id, status,
+    temporary_applied_at,
+    official_applied_at, course_started_at, course_completed_at)
+    VALUES (#{statusId}, #{courseId},
+    #{status},#{temporaryAppliedAt},#{officialAppliedAt},#{courseStartedAt},#{courseCompletedAt})
+  </insert>
+
+  <!-- 受講生を更新 -->
+  <update id="updateStudent"
+    parameterType="raisetech.student.management.data.Student">
+    UPDATE StudentManagement.students SET student_full_name = #{studentFullName}, student_furigana =
+    #{studentFurigana}, student_nickname = #{studentNickname}, email = #{email}, prefecture =
+    #{prefecture}, city = #{city}, age = #{age}, gender = #{gender}, student_remark =
+    #{studentRemark}, student_is_deleted = #{studentIsDeleted} WHERE student_id = #{studentId}
+  </update>
+
+  <!-- 受講生コース情報のコース名を更新 -->
+  <update id="updateStudentCourse"
+    parameterType="raisetech.student.management.data.StudentCourse">
+    UPDATE StudentManagement.students_courses
+    SET
+    course_name = #{courseName}
+    WHERE course_id = #{courseId} AND student_id = #{studentId}
+  </update>
+
+  <!-- コース申し込み状況の申し込み状況を更新 -->
+  <update id="updateStudentCourseStatus"
+    parameterType="raisetech.student.management.data.StudentCourseStatus">
+    UPDATE StudentManagement.students_courses_status
+    SET
+    status =
+    #{status},temporary_applied_at=#{temporaryAppliedAt},official_applied_at=#{officialAppliedAt},course_started_at=#{courseStartedAt},course_completed_at=#{courseCompletedAt}
+    WHERE status_id = #{statusId} AND course_id = #{courseId}
+  </update>
+
+</mapper>
+
